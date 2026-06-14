@@ -14,6 +14,8 @@ What it does:
 	- Removes matching references from src/modules/__init__.py and src/app.py.
 """
 
+from __future__ import annotations
+
 import argparse
 import re
 import shutil

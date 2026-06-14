@@ -33,7 +33,7 @@ def test_main_skips_description_prompt_if_app_exists(tmp_path, monkeypatch):
 
     monkeypatch.setattr("builtins.input", fail_input)
 
-    project_init.main()
+    project_init.main([])
 
     assert (tmp_path / ".gitignore").exists()
     assert (tmp_path / "src" / "modules" / "__init__.py").exists()

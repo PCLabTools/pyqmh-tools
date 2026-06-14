@@ -52,7 +52,7 @@ def test_main_no_modules_does_not_prompt(tmp_path, monkeypatch):
         raise AssertionError("input should not be called when no modules exist")
 
     monkeypatch.setattr("builtins.input", fail_input)
-    module_remove.main()
+    module_remove.main([])
 
 
 def test_main_removes_regular_module_and_references(tmp_path, monkeypatch):
@@ -75,7 +75,7 @@ def test_main_removes_regular_module_and_references(tmp_path, monkeypatch):
     answers = iter(["test_factory", "y"])
     monkeypatch.setattr("builtins.input", lambda _prompt: next(answers))
 
-    module_remove.main()
+    module_remove.main([])
 
     assert not target.exists()
     assert "test_factory" not in (modules_dir / "__init__.py").read_text(encoding="utf-8")
