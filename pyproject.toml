@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyqmh-tools"
+version = "0.0.1"
+authors = [
+	{ name = "PCLabTools", email = "pclabtools@github.io" },
+]
+description = "CLI tooling to scaffold and manage Python Queued Message Handler projects"
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+		"Programming Language :: Python :: 3",
+		"Programming Language :: Python :: 3 :: Only",
+		"Operating System :: OS Independent",
+]
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
+
+[project.urls]
+Homepage = "https://github.com/PCLabTools/pyqmh-tools"
+Issues = "https://github.com/PCLabTools/pyqmh-tools/issues"
+
+[project.optional-dependencies]
+test = ["pytest>=9.0"]
+
+[project.scripts]
+pyqmh_module_add = "pyqmh_tools.pyqmh_module_add:main"
+pyqmh_module_remove = "pyqmh_tools.pyqmh_module_remove:main"
+pyqmh_project_init = "pyqmh_tools.pyqmh_project_init:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["pyqmh_tools*"]
+
+[tool.setuptools.package-data]
+pyqmh_tools = ["assets/*.py", "assets/new-.gitignore"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+addopts = "-q"
