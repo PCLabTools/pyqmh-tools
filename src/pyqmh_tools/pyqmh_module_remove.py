@@ -1,3 +1,20 @@
+"""Remove a module scaffold from a pyqmh project.
+
+This command removes a module directory from ``src/modules`` and cleans up
+references in project registration files.
+
+Usage:
+	pyqmh_module_remove [--help]
+
+What it does:
+	- Lists available modules and asks which one to remove.
+	- Supports folder names or CamelCase module class names.
+	- Confirms deletion before removing files.
+	- Removes git submodules safely when the module is a submodule.
+	- Removes matching references from src/modules/__init__.py and src/app.py.
+"""
+
+import argparse
 import re
 import shutil
 import subprocess
@@ -193,7 +210,13 @@ def remove_module_reference_from_app(root: Path, module_folder_name: str) -> boo
 	return removed_any
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
+	argparse.ArgumentParser(
+		prog="pyqmh_module_remove",
+		description=__doc__,
+		formatter_class=argparse.RawDescriptionHelpFormatter,
+	).parse_args(argv)
+
 	root = get_project_root()
 	modules_dir = root / "src" / "modules"
 

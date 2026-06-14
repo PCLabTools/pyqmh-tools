@@ -1,5 +1,21 @@
+"""Initialize pyqmh project scaffolding in the current directory.
+
+This command creates the standard folder layout and starter files needed for a
+pyqmh app.
+
+Usage:
+	pyqmh_project_init [--help]
+
+What it does:
+	- Ensures src/ and src/modules/ exist.
+	- Creates src/modules/__init__.py when missing.
+	- Creates .gitignore from template when missing.
+	- Creates src/app.py from template when missing.
+"""
+
 from __future__ import annotations
 
+import argparse
 import getpass
 import shutil
 from pathlib import Path
@@ -57,7 +73,13 @@ def create_gitignore_if_missing(root: Path) -> Path | None:
 	return gitignore_path
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
+	argparse.ArgumentParser(
+		prog="pyqmh_project_init",
+		description=__doc__,
+		formatter_class=argparse.RawDescriptionHelpFormatter,
+	).parse_args(argv)
+
 	root = Path.cwd()
 	app_exists = (root / "src" / "app.py").exists()
 

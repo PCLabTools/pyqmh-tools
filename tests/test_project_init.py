@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from pyqmh_tools import pyqmh_project_init as project_init
 
 
@@ -36,3 +38,14 @@ def test_main_skips_description_prompt_if_app_exists(tmp_path, monkeypatch):
     assert (tmp_path / ".gitignore").exists()
     assert (tmp_path / "src" / "modules" / "__init__.py").exists()
     assert (tmp_path / "src" / "app.py").read_text(encoding="utf-8") == "# existing app\n"
+
+
+def test_main_help_prints_usage_and_exits(capsys):
+    with pytest.raises(SystemExit) as exc_info:
+        project_init.main(["--help"])
+
+    captured = capsys.readouterr()
+    assert exc_info.value.code == 0
+    assert "usage:" in captured.out
+    assert "pyqmh_project_init" in captured.out
+    assert "Initialize pyqmh project scaffolding" in captured.out

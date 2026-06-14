@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from pyqmh_tools import pyqmh_module_add as module_add
 
 
@@ -80,3 +82,14 @@ def test_create_factory_implementation_updates_module_init(tmp_path, monkeypatch
     module_init_text = (created.parent / "__init__.py").read_text(encoding="utf-8")
     assert "from .hardware import HardwareTestFactory" in module_init_text
     assert '"HardwareTestFactory"' in module_init_text
+
+
+def test_main_help_prints_usage_and_exits(capsys):
+    with pytest.raises(SystemExit) as exc_info:
+        module_add.main(["--help"])
+
+    captured = capsys.readouterr()
+    assert exc_info.value.code == 0
+    assert "usage:" in captured.out
+    assert "pyqmh_module_add" in captured.out
+    assert "Add a module scaffold" in captured.out

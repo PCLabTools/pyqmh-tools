@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from pyqmh_tools import pyqmh_module_remove as module_remove
 
 
@@ -78,3 +80,14 @@ def test_main_removes_regular_module_and_references(tmp_path, monkeypatch):
     assert not target.exists()
     assert "test_factory" not in (modules_dir / "__init__.py").read_text(encoding="utf-8")
     assert "from modules.test_factory import TestFactory" not in (root / "src" / "app.py").read_text(encoding="utf-8")
+
+
+def test_main_help_prints_usage_and_exits(capsys):
+    with pytest.raises(SystemExit) as exc_info:
+        module_remove.main(["--help"])
+
+    captured = capsys.readouterr()
+    assert exc_info.value.code == 0
+    assert "usage:" in captured.out
+    assert "pyqmh_module_remove" in captured.out
+    assert "Remove a module scaffold" in captured.out

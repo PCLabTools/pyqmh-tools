@@ -1,5 +1,21 @@
+"""Add a module scaffold to a pyqmh project.
+
+This command creates new module folders under ``src/modules`` and updates
+project registration files when they exist.
+
+Usage:
+	pyqmh_module_add [--help]
+
+What it can do:
+	- Create a standard module from templates.
+	- Create a factory module (factory/base/simulated templates).
+	- Add a new implementation file to an existing factory module.
+	- Add a git repository module via git submodule.
+"""
+
 from __future__ import annotations
 
+import argparse
 import getpass
 import re
 import shutil
@@ -135,6 +151,7 @@ def create_module_init(module_dir: Path, module_class_name: str, module_imports:
 			"{{MODULE_EXPORTS}}": module_exports,
 		},
 	)
+
 	return destination
 
 
@@ -407,7 +424,13 @@ def prompt_template_workflow(module_name: str) -> None:
 	print(f"Created module file: {created_file}")
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
+	argparse.ArgumentParser(
+		prog="pyqmh_module_add",
+		description=__doc__,
+		formatter_class=argparse.RawDescriptionHelpFormatter,
+	).parse_args(argv)
+
 	module_name = input("Module name (snake case): ").strip()
 	try:
 		module_dir = get_module_dir(module_name)
