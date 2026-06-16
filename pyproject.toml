@@ -26,6 +26,7 @@ Issues = "https://github.com/PCLabTools/pyqmh-tools/issues"
 
 [project.optional-dependencies]
 test = ["pytest>=8.0,<9.0"]
+recommended = ["flask>=3.0"]
 
 [project.scripts]
 pyqmh_module_add = "pyqmh_tools.pyqmh_module_add:main"
