@@ -40,6 +40,32 @@ def test_main_skips_description_prompt_if_app_exists(tmp_path, monkeypatch):
     assert (tmp_path / "src" / "app.py").read_text(encoding="utf-8") == "# existing app\n"
 
 
+def test_create_app_file_with_options_flask_copies_www_assets(tmp_path):
+    src_dir = tmp_path / "src"
+    src_dir.mkdir(parents=True)
+
+    created = project_init.create_app_file_with_options(src_dir, "project with web", use_flask_gui=True)
+
+    assert created == src_dir / "app.py"
+    app_text = created.read_text(encoding="utf-8")
+    assert "from flask import Flask" in app_text
+    assert (src_dir / "www" / "templates" / "index.html").exists()
+    assert (src_dir / "www" / "static" / "css" / "main.css").exists()
+
+
+def test_main_prompts_flask_before_description_and_creates_flask_assets(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    answers = iter(["yes", "project description"])
+
+    monkeypatch.setattr("builtins.input", lambda _prompt: next(answers))
+
+    project_init.main([])
+
+    app_text = (tmp_path / "src" / "app.py").read_text(encoding="utf-8")
+    assert "from flask import Flask" in app_text
+    assert (tmp_path / "src" / "www" / "templates" / "index.html").exists()
+
+
 def test_main_help_prints_usage_and_exits(capsys):
     with pytest.raises(SystemExit) as exc_info:
         project_init.main(["--help"])

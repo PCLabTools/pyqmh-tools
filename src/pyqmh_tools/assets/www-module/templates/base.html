@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Hello World{% endblock %}</title>
+    <script>
+        (function () {
+            try {
+                var mode = localStorage.getItem('pyqmh-theme') || 'system';
+                var dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                var resolved = mode === 'system' ? (dark ? 'dark' : 'light') : mode;
+                document.documentElement.setAttribute('data-theme', resolved);
+                document.documentElement.setAttribute('data-theme-mode', mode);
+            } catch (_) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+                document.documentElement.setAttribute('data-theme-mode', 'system');
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="{{ module_base_path }}/static/css/hello_world.css">
+    {% block head_extra %}{% endblock %}
+</head>
+<body class="{% if not show_nav %}no-nav{% endif %}">
+    {% if show_nav %}
+    <nav id="main-nav">
+        <div class="nav-header">
+            <a href="{{ module_base_path or '/' }}" class="nav-brand">hello world</a>
+        </div>
+        <ul class="nav-links">
+            {% if show_home_about %}
+            <li>
+                <a href="{{ module_base_path or '/' }}" class="nav-link{% if request.path == (module_base_path or '/') %} active{% endif %}">Home</a>
+            </li>
+            {% endif %}
+            {% if modules %}
+            <li class="nav-item-dropdown">
+                <span class="nav-link nav-dropdown-trigger{% if '/module/' in request.path %} active{% endif %}">
+                    Modules
+                    <svg class="dropdown-caret" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                </span>
+                <ul class="nav-dropdown">
+                    {% for module in modules %}
+                    <li>
+                        <a href="{{ module_base_path }}/module/{{ module }}"
+                           class="nav-dropdown-link{% if '/module/' + module in request.path %} active{% endif %}">
+                            {{ module | replace('_', ' ') | title }}
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </li>
+            {% endif %}
+            {% if show_home_about %}
+            <li>
+                <a href="{{ module_base_path }}/about" class="nav-link{% if request.path == (module_base_path + '/about') %} active{% endif %}">About</a>
+            </li>
+            {% endif %}
+        </ul>
+        <div class="theme-controls" aria-label="Theme controls">
+            <button type="button" class="theme-button" data-theme-option="light" title="Light theme" aria-label="Light theme">☀</button>
+            <button type="button" class="theme-button" data-theme-option="dark" title="Dark theme" aria-label="Dark theme">☾</button>
+            <button type="button" class="theme-button" data-theme-option="system" title="System theme" aria-label="System theme">◐</button>
+        </div>
+    </nav>
+    {% endif %}
+    <main id="main-content">
+        {% block content %}{% endblock %}
+    </main>
+    <script src="{{ module_base_path }}/static/js/theme.js"></script>
+</body>
+</html>

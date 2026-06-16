@@ -84,6 +84,52 @@ def test_create_factory_implementation_updates_module_init(tmp_path, monkeypatch
     assert '"HardwareTestFactory"' in module_init_text
 
 
+def test_create_module_app_file_standard_non_flask(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    modules_dir = tmp_path / "src" / "modules"
+    modules_dir.mkdir(parents=True)
+    (modules_dir / "__init__.py").write_text('__all__ = []\n', encoding="utf-8")
+
+    module_add.create_standard_module("hello_world", "hello description")
+    module_dir = modules_dir / "hello_world"
+    created = module_add.create_module_app_file(
+        module_dir,
+        "HelloWorld",
+        "hello description",
+        use_flask_gui=False,
+        module_source="standard",
+    )
+
+    assert created.exists()
+    app_text = created.read_text(encoding="utf-8")
+    assert "from module import HelloWorld" in app_text
+    assert "from flask import Flask" not in app_text
+    assert not (module_dir / "www").exists()
+
+
+def test_create_module_app_file_factory_flask_copies_www_and_uses_factory_import(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    modules_dir = tmp_path / "src" / "modules"
+    modules_dir.mkdir(parents=True)
+    (modules_dir / "__init__.py").write_text('__all__ = []\n', encoding="utf-8")
+
+    created_dir = module_add.create_factory_module("test_factory", "factory description")
+    created = module_add.create_module_app_file(
+        created_dir,
+        "TestFactory",
+        "factory description",
+        use_flask_gui=True,
+        module_source="factory",
+    )
+
+    assert created.exists()
+    app_text = created.read_text(encoding="utf-8")
+    assert "from flask import Flask" in app_text
+    assert "from factory import TestFactory" in app_text
+    assert (created_dir / "www" / "templates" / "index.html").exists()
+    assert (created_dir / "www" / "static" / "css" / "hello_world.css").exists()
+
+
 def test_main_help_prints_usage_and_exits(capsys):
     with pytest.raises(SystemExit) as exc_info:
         module_add.main(["--help"])

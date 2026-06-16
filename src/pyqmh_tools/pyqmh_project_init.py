@@ -43,7 +43,14 @@ def initialize_project_structure(base_path: Path | None = None) -> tuple[Path, P
 
 def create_app_file(src_dir: Path, description: str) -> Path:
 	"""Create src/app.py from template and replace known placeholders."""
-	template_path = Path(__file__).resolve().parent / "assets" / "new-app.py"
+	return create_app_file_with_options(src_dir, description, use_flask_gui=False)
+
+
+def create_app_file_with_options(src_dir: Path, description: str, use_flask_gui: bool) -> Path:
+	"""Create src/app.py from template, replacing placeholders and optional web assets."""
+	assets_dir = Path(__file__).resolve().parent / "assets"
+	template_name = "new-app-flask.py" if use_flask_gui else "new-app.py"
+	template_path = assets_dir / template_name
 	if not template_path.exists():
 		raise FileNotFoundError(f"Template not found: {template_path}")
 
@@ -56,7 +63,20 @@ def create_app_file(src_dir: Path, description: str) -> Path:
 	content = content.replace("{{MODULE_NAME}}", "MyModule")
 	destination.write_text(content, encoding="utf-8")
 
+	if use_flask_gui:
+		copy_web_assets(assets_dir / "www-app", src_dir / "www")
+
 	return destination
+
+
+def copy_web_assets(source_dir: Path, destination_dir: Path) -> None:
+	"""Copy web GUI assets into the destination folder if the source exists."""
+	if not source_dir.exists():
+		raise FileNotFoundError(f"Template directory not found: {source_dir}")
+
+	if destination_dir.exists():
+		shutil.rmtree(destination_dir)
+	shutil.copytree(source_dir, destination_dir)
 
 
 def create_gitignore_if_missing(root: Path) -> Path | None:
@@ -101,9 +121,10 @@ def main(argv: list[str] | None = None) -> None:
 		print(f"Created .gitignore file: {gitignore_path}")
 
 	if not app_exists:
+		use_flask_gui = input('Integrate a "flask" powered web gui? (y/N): ').strip().lower() in {"y", "yes"}
 		description = input("App/project description: ").strip()
 		try:
-			app_path = create_app_file(src_dir, description)
+			app_path = create_app_file_with_options(src_dir, description, use_flask_gui)
 		except FileNotFoundError as exc:
 			print(f"Error: {exc}")
 			return

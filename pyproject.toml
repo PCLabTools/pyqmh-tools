@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyqmh-tools"
-version = "0.0.4"
+version = "0.0.5"
 authors = [
 	{ name = "PCLabTools", email = "pclabtools@github.io" },
 ]
@@ -40,7 +40,16 @@ where = ["src"]
 include = ["pyqmh_tools*"]
 
 [tool.setuptools.package-data]
-pyqmh_tools = ["assets/*.py", "assets/new-.gitignore"]
+pyqmh_tools = [
+	"assets/*.py",
+	"assets/new-.gitignore",
+	"assets/www-app/templates/*.html",
+	"assets/www-app/static/css/*.css",
+	"assets/www-app/static/js/*.js",
+	"assets/www-module/templates/*.html",
+	"assets/www-module/static/css/*.css",
+	"assets/www-module/static/js/*.js",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

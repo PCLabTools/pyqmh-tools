@@ -1,5 +1,5 @@
 """
-file: app.py
+file: {{MODULE_FOLDER_NAME}}/app.py
 description: {{DESCRIPTION}}
 author: {{AUTHOR}}
 """
@@ -7,6 +7,7 @@ author: {{AUTHOR}}
 import logging
 import argparse
 from pyqmh import Protocol, Message
+from module import {{MODULE_NAME}}
 
 class App():
     def __init__(self, debug: bool = False):
@@ -17,7 +18,7 @@ class App():
         self.logger.setLevel(logging.DEBUG if self.debug else logging.INFO)
 
         # Register modules here
-        # Example("ExampleModule", self.protocol, debug=self.debug)
+        {{MODULE_NAME}}("{{MODULE_NAME}}", self.protocol, debug=self.debug)
 
     def __del__(self):
         """Clean up the main module by deleting the protocol instance.

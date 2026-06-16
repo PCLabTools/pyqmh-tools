@@ -257,6 +257,53 @@ def apply_template_values(
 	file_path.write_text(content, encoding="utf-8")
 
 
+def copy_web_assets(source_dir: Path, destination_dir: Path) -> None:
+	"""Copy web assets into destination, replacing prior content when present."""
+	if not source_dir.exists():
+		raise FileNotFoundError(f"Template directory not found: {source_dir}")
+
+	if destination_dir.exists():
+		shutil.rmtree(destination_dir)
+	shutil.copytree(source_dir, destination_dir)
+
+
+def create_module_app_file(
+	module_dir: Path,
+	module_class_name: str,
+	module_description: str,
+	use_flask_gui: bool,
+	module_source: str,
+) -> Path:
+	"""Create module-level app.py and optional www assets from templates."""
+	assets_dir = Path(__file__).resolve().parent / "assets"
+	template_name = "new-module-app-flask.py" if use_flask_gui else "new-module-app.py"
+	template_path = assets_dir / template_name
+	if not template_path.exists():
+		raise FileNotFoundError(f"Template not found: {template_path}")
+
+	destination = module_dir / "app.py"
+	shutil.copy2(template_path, destination)
+	apply_template_values(
+		destination,
+		module_class_name,
+		module_description,
+		extra_replacements={"{{MODULE_FOLDER_NAME}}": module_dir.name},
+	)
+
+	if module_source == "factory":
+		content = destination.read_text(encoding="utf-8")
+		content = content.replace(
+			f"from module import {module_class_name}",
+			f"from factory import {module_class_name}",
+		)
+		destination.write_text(content, encoding="utf-8")
+
+	if use_flask_gui:
+		copy_web_assets(assets_dir / "www-module", module_dir / "www")
+
+	return destination
+
+
 def create_factory_module(module_name: str, module_description: str) -> Path:
 	"""Create a factory module from templates under src/modules/<module_name>."""
 	assets_dir = Path(__file__).resolve().parent / "assets"
@@ -406,13 +453,16 @@ def add_repository_module(repo_link: str, module_name: str | None = None) -> Pat
 	return target_path
 
 
-def prompt_template_workflow(module_name: str) -> None:
+def prompt_template_workflow(module_name: str, use_flask_gui: bool) -> None:
 	"""Prompt for template details and run the existing standard/factory workflow."""
 	module_description = input("Module description: ").strip()
 	template_type = input('Template type ("standard" or "factory"): ').strip().lower()
+	module_class_name = to_camel_case(module_name)
+	module_dir = get_module_dir(module_name)
 
 	if template_type == "factory":
 		created_dir = create_factory_module(module_name, module_description)
+		create_module_app_file(created_dir, module_class_name, module_description, use_flask_gui, module_source="factory")
 		print(f"Created factory module files in: {created_dir}")
 		return
 
@@ -421,6 +471,7 @@ def prompt_template_workflow(module_name: str) -> None:
 		return
 
 	created_file = create_standard_module(module_name, module_description)
+	create_module_app_file(module_dir, module_class_name, module_description, use_flask_gui, module_source="standard")
 	print(f"Created module file: {created_file}")
 
 
@@ -431,12 +482,14 @@ def main(argv: list[str] | None = None) -> None:
 		formatter_class=argparse.RawDescriptionHelpFormatter,
 	).parse_args(argv)
 
+	use_flask_gui = input('Integrate a "flask" powered web gui? (y/N): ').strip().lower() in {"y", "yes"}
 	module_name = input("Module name (snake case): ").strip()
 	try:
 		module_dir = get_module_dir(module_name)
 	except ValueError as exc:
 		print(f"Error: {exc}")
 		return
+	module_class_name = to_camel_case(module_name)
 
 	if module_dir.exists():
 		if not is_factory_module(module_dir):
@@ -466,7 +519,7 @@ def main(argv: list[str] | None = None) -> None:
 		if not repo_link:
 			print("Repository link is blank. Falling back to template workflow.")
 			try:
-				prompt_template_workflow(module_name)
+				prompt_template_workflow(module_name, use_flask_gui)
 			except (ValueError, FileNotFoundError) as exc:
 				print(f"Error: {exc}")
 			return
@@ -485,6 +538,7 @@ def main(argv: list[str] | None = None) -> None:
 	if module_type == "factory":
 		try:
 			created_dir = create_factory_module(module_name, module_description)
+			create_module_app_file(created_dir, module_class_name, module_description, use_flask_gui, module_source="factory")
 		except (ValueError, FileNotFoundError, RuntimeError) as exc:
 			print(f"Error: {exc}")
 			return
@@ -498,6 +552,7 @@ def main(argv: list[str] | None = None) -> None:
 
 	try:
 		created_file = create_standard_module(module_name, module_description)
+		create_module_app_file(module_dir, module_class_name, module_description, use_flask_gui, module_source="standard")
 	except (ValueError, FileNotFoundError, RuntimeError) as exc:
 		print(f"Error: {exc}")
 		return
