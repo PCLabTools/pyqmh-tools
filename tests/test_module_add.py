@@ -127,7 +127,7 @@ def test_create_module_app_file_factory_flask_copies_www_and_uses_factory_import
     assert "from flask import Flask" in app_text
     assert "from factory import TestFactory" in app_text
     assert (created_dir / "www" / "templates" / "index.html").exists()
-    assert (created_dir / "www" / "static" / "css" / "hello_world.css").exists()
+    assert (created_dir / "www" / "static" / "css" / "style.css").exists()
 
 
 def test_main_help_prints_usage_and_exits(capsys):
@@ -138,4 +138,4 @@ def test_main_help_prints_usage_and_exits(capsys):
     assert exc_info.value.code == 0
     assert "usage:" in captured.out
     assert "pyqmh_module_add" in captured.out
-    assert "Add a module scaffold" in captured.out
+    assert "Interactively add or extend modules" in captured.out
