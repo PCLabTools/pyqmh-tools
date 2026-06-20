@@ -124,9 +124,10 @@ def test_create_module_app_file_factory_flask_copies_www_and_uses_factory_import
 
     assert created.exists()
     app_text = created.read_text(encoding="utf-8")
-    assert "from www import ModuleWebGui" in app_text
+    assert "from .www import ModuleWebGui" in app_text
     assert "from flask import Flask" not in app_text
-    assert "from factory import TestFactory" in app_text
+    assert "{{MODULE_FACTORY_CLASS}}" not in app_text
+    assert "from .factory import TestFactory" in app_text
     assert (created_dir / "www.py").exists()
     www_py_text = (created_dir / "www.py").read_text(encoding="utf-8")
     assert "from flask import Flask" in www_py_text

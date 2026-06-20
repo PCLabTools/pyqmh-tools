@@ -286,18 +286,24 @@ def create_module_app_file(
 ) -> Path:
 	"""Create module-level app.py, optional www.py, and optional web assets from templates."""
 	assets_dir = Path(__file__).resolve().parent / "assets"
-	template_name = "new-module-app-flask.py" if use_flask_gui else "new-module-app.py"
+	if module_source == "factory":
+		template_name = "new-module-app-flask-factory.py" if use_flask_gui else "new-module-app-factory.py"
+	else:
+		template_name = "new-module-app-flask.py" if use_flask_gui else "new-module-app.py"
 	template_path = assets_dir / template_name
 	if not template_path.exists():
 		raise FileNotFoundError(f"Template not found: {template_path}")
 
 	destination = module_dir / "app.py"
 	shutil.copy2(template_path, destination)
+	extra_replacements = {"{{MODULE_FOLDER_NAME}}": module_dir.name}
+	if module_source == "factory":
+		extra_replacements["{{MODULE_FACTORY_CLASS}}"] = module_class_name
 	apply_template_values(
 		destination,
 		module_class_name,
 		module_description,
-		extra_replacements={"{{MODULE_FOLDER_NAME}}": module_dir.name},
+		extra_replacements=extra_replacements,
 	)
 
 	if module_source == "factory":
