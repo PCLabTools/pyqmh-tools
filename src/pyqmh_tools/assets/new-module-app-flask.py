@@ -5,6 +5,7 @@ author: {{AUTHOR}}
 """
 
 import os
+import json
 import logging
 import argparse
 import threading
@@ -24,7 +25,25 @@ class App():
         # Register modules here
         {{MODULE_NAME}}("hello_world", self.protocol, debug=self.debug)
 
+        self._routes_config = self._load_routes_config()
+
         self._flask_app = self._create_flask_app()
+
+    def _load_routes_config(self) -> dict:
+        """Load optional routes.json from the module app directory."""
+        routes_file = os.path.join(os.path.dirname(__file__), "routes.json")
+        if not os.path.isfile(routes_file):
+            return {}
+
+        try:
+            with open(routes_file, "r", encoding="utf-8") as handle:
+                data = json.load(handle)
+            if isinstance(data, dict):
+                return data
+            self.logger.warning("Ignoring routes.json: expected a JSON object at the top level.")
+        except (OSError, json.JSONDecodeError) as exc:
+            self.logger.warning("Failed to read routes.json: %s", exc)
+        return {}
 
     def _discover_module_web_apps(self) -> list:
         """Return sorted list of nested module names that contain a www folder."""
@@ -42,17 +61,162 @@ class App():
                 result.append(name)
         return result
 
-    def _template_context(self, modules: list, embedded_mode: bool) -> dict:
+    def _path_is_active(self, current_path: str, target_path: str) -> bool:
+        """Return True when the current request path matches a navigation target."""
+        if target_path == "/":
+            return current_path == "/"
+        return current_path == target_path or current_path.startswith(target_path + "/")
+
+    def _resolve_module_nav_path(self, path: str, module_base_path: str) -> str:
+        """Resolve route paths for standalone and embedded module modes."""
+        if not isinstance(path, str) or not path:
+            return "#"
+
+        if not module_base_path:
+            return path
+
+        if path.startswith("http://") or path.startswith("https://") or path.startswith("#"):
+            return path
+
+        if path == module_base_path or path.startswith(module_base_path + "/"):
+            return path
+
+        if path == "/":
+            return module_base_path
+
+        if path.startswith("/"):
+            return f"{module_base_path}{path}"
+
+        return path
+
+    def _build_nav_items_from_routes(
+        self,
+        module_base_path: str,
+        current_path: str,
+    ) -> list:
+        """Build ordered nav items from routes.json configuration."""
+        nav_items = []
+        for label, value in self._routes_config.items():
+            if str(label).lower() == "modules":
+                if not isinstance(value, dict):
+                    continue
+
+                dropdown_items = []
+                for module_label, module_path in value.items():
+                    if not isinstance(module_label, str) or not isinstance(module_path, str):
+                        continue
+                    resolved_path = self._resolve_module_nav_path(module_path, module_base_path)
+                    dropdown_items.append(
+                        {
+                            "label": module_label,
+                            "path": resolved_path,
+                            "active": self._path_is_active(current_path, resolved_path),
+                        }
+                    )
+
+                if dropdown_items:
+                    nav_items.append(
+                        {
+                            "type": "dropdown",
+                            "label": "Modules",
+                            "items": dropdown_items,
+                            "active": any(item["active"] for item in dropdown_items),
+                        }
+                    )
+                continue
+
+            if not isinstance(label, str) or not isinstance(value, str):
+                continue
+
+            resolved_path = self._resolve_module_nav_path(value, module_base_path)
+            nav_items.append(
+                {
+                    "type": "link",
+                    "label": label,
+                    "path": resolved_path,
+                    "active": self._path_is_active(current_path, resolved_path),
+                }
+            )
+
+        return nav_items
+
+    def _build_default_nav_items(
+        self,
+        modules: list,
+        module_base_path: str,
+        show_home_about: bool,
+        current_path: str,
+    ) -> list:
+        """Build navigation items using legacy module behavior."""
+        nav_items = []
+
+        if show_home_about:
+            home_path = module_base_path or "/"
+            nav_items.append(
+                {
+                    "type": "link",
+                    "label": "Home",
+                    "path": home_path,
+                    "active": self._path_is_active(current_path, home_path),
+                }
+            )
+
+        if modules:
+            dropdown_items = []
+            for module in modules:
+                module_path = f"{module_base_path}/module/{module}" if module_base_path else f"/module/{module}"
+                dropdown_items.append(
+                    {
+                        "label": module.replace("_", " ").title(),
+                        "path": module_path,
+                        "active": self._path_is_active(current_path, module_path),
+                    }
+                )
+
+            nav_items.append(
+                {
+                    "type": "dropdown",
+                    "label": "Modules",
+                    "items": dropdown_items,
+                    "active": any(item["active"] for item in dropdown_items),
+                }
+            )
+
+        if show_home_about:
+            about_path = f"{module_base_path}/about" if module_base_path else "/about"
+            nav_items.append(
+                {
+                    "type": "link",
+                    "label": "About",
+                    "path": about_path,
+                    "active": self._path_is_active(current_path, about_path),
+                }
+            )
+
+        return nav_items
+
+    def _template_context(self, modules: list, embedded_mode: bool, current_path: str) -> dict:
         """Build shared template context for standalone and embedded views."""
         base_path = "" if not embedded_mode else "/module/hello_world/app"
         show_home_about = not embedded_mode
-        show_nav = show_home_about or bool(modules)
+        if self._routes_config:
+            nav_items = self._build_nav_items_from_routes(base_path, current_path)
+        else:
+            nav_items = self._build_default_nav_items(
+                modules,
+                base_path,
+                show_home_about,
+                current_path,
+            )
+
+        show_nav = bool(nav_items)
         return {
             "modules": modules,
             "show_nav": show_nav,
             "show_home_about": show_home_about,
             "embedded_mode": embedded_mode,
             "module_base_path": base_path,
+            "nav_items": nav_items,
         }
 
     def _create_flask_app(self) -> Flask:
@@ -70,14 +234,14 @@ class App():
         def index():
             return render_template(
                 "index.html",
-                **self._template_context(module_names, embedded_mode=False),
+                **self._template_context(module_names, embedded_mode=False, current_path=request.path),
             )
 
         @flask_app.route("/about")
         def about():
             return render_template(
                 "about.html",
-                **self._template_context(module_names, embedded_mode=False),
+                **self._template_context(module_names, embedded_mode=False, current_path=request.path),
             )
 
         @flask_app.route("/module/<name>")

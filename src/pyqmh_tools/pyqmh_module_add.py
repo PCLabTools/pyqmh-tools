@@ -1,16 +1,26 @@
-"""Add a module scaffold to a pyqmh project.
+"""Interactively add or extend modules in a pyqmh project.
 
-This command creates new module folders under ``src/modules`` and updates
-project registration files when they exist.
+The ``pyqmh_module_add`` command is run from a project root and helps you add
+module code under ``src/modules`` with minimal manual wiring.
 
 Usage:
 	pyqmh_module_add [--help]
 
-What it can do:
-	- Create a standard module from templates.
-	- Create a factory module (factory/base/simulated templates).
-	- Add a new implementation file to an existing factory module.
-	- Add a git repository module via git submodule.
+Interactive workflow:
+	1. Optionally enable Flask web GUI scaffolding for created modules.
+	2. Enter a module name.
+	3. Choose a module type: ``standard``, ``factory``, or ``repository``.
+
+Behavior summary:
+	- ``standard``: creates ``module.py`` and module ``__init__.py`` from templates.
+	- ``factory``: creates ``factory.py``, ``base.py``, ``simulated.py``, and module ``__init__.py``.
+	- Flask variant: when Flask GUI is enabled, generates module app wiring from
+	  ``new-module-app-flask.py`` and copies module web assets (``www-module``).
+	- existing factory module: can add a new implementation file.
+	- ``repository``: adds a Git submodule under ``src/modules/<module_name>``.
+
+When applicable, it also updates project registration points such as
+``src/modules/__init__.py`` and ``src/app.py``.
 """
 
 from __future__ import annotations

@@ -138,3 +138,41 @@ python src/app.py --debug
 - Commands are designed to be run from the project root where `src/` should exist.
 - The tools are idempotent for common setup steps (existing files/folders are generally preserved).
 - Generated files are template-driven from `src/pyqmh_tools/assets`.
+
+## Navigation Customization with routes.json
+
+Generated Flask app templates now support an optional `routes.json` file placed in the same directory as `app.py`.
+
+Supported templates:
+
+- `new-app-flask.py`
+- `new-module-app-flask.py`
+
+When `routes.json` is present and valid:
+
+- Navigation order follows the order of keys in the JSON file.
+- Top-level key/value pairs become direct navigation links.
+- A top-level `modules` object becomes a `Modules` dropdown.
+- This overrides the default behavior that auto-populates module links from discovered module folders.
+
+When `routes.json` is missing or invalid:
+
+- Existing default behavior is used (auto-discovered modules and standard link layout).
+
+Example:
+
+```json
+{
+  "Home": "/",
+  "About": "/about",
+  "modules": {
+    "Hello World": "/module/hello_world"
+  }
+}
+```
+
+The example above renders navigation in this order:
+
+1. Home
+2. About
+3. Modules -> Hello World

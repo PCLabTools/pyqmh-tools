@@ -5,6 +5,7 @@ author: {{AUTHOR}}
 """
 
 import os
+import json
 import logging
 import argparse
 import threading
@@ -23,7 +24,25 @@ class App():
         # Register modules here
         # Example("ExampleModule", self.protocol, debug=self.debug)
 
+        self._routes_config = self._load_routes_config()
+
         self._flask_app = self._create_flask_app()
+
+    def _load_routes_config(self) -> dict:
+        """Load optional routes.json from the app directory."""
+        routes_file = os.path.join(os.path.dirname(__file__), "routes.json")
+        if not os.path.isfile(routes_file):
+            return {}
+
+        try:
+            with open(routes_file, "r", encoding="utf-8") as handle:
+                data = json.load(handle)
+            if isinstance(data, dict):
+                return data
+            self.logger.warning("Ignoring routes.json: expected a JSON object at the top level.")
+        except (OSError, json.JSONDecodeError) as exc:
+            self.logger.warning("Failed to read routes.json: %s", exc)
+        return {}
 
     def _discover_module_web_apps(self) -> list:
         """Return sorted list of module names that contain a www folder."""
@@ -70,6 +89,134 @@ class App():
         )
         return os.path.isfile(about_file)
 
+    def _path_is_active(self, current_path: str, target_path: str) -> bool:
+        """Return True when the current request path matches a navigation target."""
+        if target_path == "/":
+            return current_path == "/"
+        return current_path == target_path or current_path.startswith(target_path + "/")
+
+    def _build_nav_items_from_routes(self, current_path: str) -> list:
+        """Build ordered nav items from routes.json configuration."""
+        nav_items = []
+        for label, value in self._routes_config.items():
+            if str(label).lower() == "modules":
+                if not isinstance(value, dict):
+                    continue
+
+                dropdown_items = []
+                for module_label, module_path in value.items():
+                    if not isinstance(module_label, str) or not isinstance(module_path, str):
+                        continue
+                    dropdown_items.append(
+                        {
+                            "label": module_label,
+                            "path": module_path,
+                            "active": self._path_is_active(current_path, module_path),
+                        }
+                    )
+
+                if dropdown_items:
+                    nav_items.append(
+                        {
+                            "type": "dropdown",
+                            "label": "Modules",
+                            "items": dropdown_items,
+                            "active": any(item["active"] for item in dropdown_items),
+                        }
+                    )
+                continue
+
+            if not isinstance(label, str) or not isinstance(value, str):
+                continue
+            nav_items.append(
+                {
+                    "type": "link",
+                    "label": label,
+                    "path": value,
+                    "active": self._path_is_active(current_path, value),
+                }
+            )
+
+        return nav_items
+
+    def _build_default_nav_items(self, module_names: list, current_path: str) -> list:
+        """Build navigation items using the legacy auto-discovery behavior."""
+        nav_items = [
+            {
+                "type": "link",
+                "label": "Home",
+                "path": "/",
+                "active": current_path == "/",
+            }
+        ]
+
+        if module_names:
+            dropdown_items = []
+            for module in module_names:
+                module_path = f"/module/{module}"
+                dropdown_items.append(
+                    {
+                        "label": module.replace("_", " ").title(),
+                        "path": module_path,
+                        "active": self._path_is_active(current_path, module_path),
+                    }
+                )
+
+            nav_items.append(
+                {
+                    "type": "dropdown",
+                    "label": "Modules",
+                    "items": dropdown_items,
+                    "active": any(item["active"] for item in dropdown_items),
+                }
+            )
+
+        nav_items.append(
+            {
+                "type": "link",
+                "label": "About",
+                "path": "/about",
+                "active": self._path_is_active(current_path, "/about"),
+            }
+        )
+        return nav_items
+
+    def _build_nav_items(self, module_names: list, current_path: str) -> list:
+        """Build navigation items from routes.json or fallback auto-discovery."""
+        if self._routes_config:
+            return self._build_nav_items_from_routes(current_path)
+        return self._build_default_nav_items(module_names, current_path)
+
+    def _build_embedded_module_nav_items(
+        self,
+        nested_modules: list,
+        module_base_path: str,
+        current_path: str,
+    ) -> list:
+        """Build nav items for a module rendered inside the main app iframe context."""
+        if not nested_modules:
+            return []
+
+        dropdown_items = []
+        for module in nested_modules:
+            module_path = f"{module_base_path}/module/{module}"
+            dropdown_items.append(
+                {
+                    "label": module.replace("_", " ").title(),
+                    "path": module_path,
+                    "active": self._path_is_active(current_path, module_path),
+                }
+            )
+
+        return [
+            {
+                "type": "dropdown",
+                "label": "Modules",
+                "items": dropdown_items,
+                "active": any(item["active"] for item in dropdown_items),
+            }
+        ]
+
     def _create_flask_app(self) -> Flask:
         """Create and configure the main Flask application."""
         src_dir = os.path.dirname(__file__)
@@ -83,7 +230,11 @@ class App():
 
         @flask_app.route("/")
         def index():
-            return render_template("index.html", modules=module_names)
+            return render_template(
+                "index.html",
+                modules=module_names,
+                nav_items=self._build_nav_items(module_names, request.path),
+            )
 
         @flask_app.route("/about")
         def about():
@@ -94,12 +245,18 @@ class App():
                 "about.html",
                 modules=module_names,
                 modules_with_about=modules_with_about,
+                nav_items=self._build_nav_items(module_names, request.path),
             )
 
         @flask_app.route("/module/<name>")
         def module_page(name):
             if name in module_names:
-                return render_template("module_page.html", module_name=name, modules=module_names)
+                return render_template(
+                    "module_page.html",
+                    module_name=name,
+                    modules=module_names,
+                    nav_items=self._build_nav_items(module_names, request.path),
+                )
             return redirect(url_for("index"))
 
         @flask_app.route("/module/<name>/app/")
@@ -115,6 +272,11 @@ class App():
 
             nested_modules = self._discover_nested_module_web_apps(name)
             module_base_path = f"/module/{name}/app"
+            nav_items = self._build_embedded_module_nav_items(
+                nested_modules,
+                module_base_path,
+                request.path,
+            )
 
             # Render using a module-local template loader so extends/base lookups
             # resolve within that module's own templates folder.
@@ -126,10 +288,11 @@ class App():
             return template.render(
                 module_name=name,
                 modules=nested_modules,
-                show_nav=bool(nested_modules),
+                show_nav=bool(nav_items),
                 show_home_about=False,
                 embedded_mode=True,
                 module_base_path=module_base_path,
+                nav_items=nav_items,
                 request=request,
                 url_for=url_for,
             )
@@ -146,6 +309,11 @@ class App():
 
             nested_modules = self._discover_nested_module_web_apps(name)
             module_base_path = f"/module/{name}/app"
+            nav_items = self._build_embedded_module_nav_items(
+                nested_modules,
+                module_base_path,
+                request.path,
+            )
 
             module_env = Environment(
                 loader=FileSystemLoader(templates_dir),
@@ -155,10 +323,11 @@ class App():
             return template.render(
                 module_name=name,
                 modules=nested_modules,
-                show_nav=bool(nested_modules),
+                show_nav=bool(nav_items),
                 show_home_about=False,
                 embedded_mode=True,
                 module_base_path=module_base_path,
+                nav_items=nav_items,
                 request=request,
                 url_for=url_for,
             )

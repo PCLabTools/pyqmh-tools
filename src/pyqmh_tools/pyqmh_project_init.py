@@ -1,7 +1,8 @@
 """Initialize pyqmh project scaffolding in the current directory.
 
 This command creates the standard folder layout and starter files needed for a
-pyqmh app.
+pyqmh app, with support for either the default console app scaffold or an
+optional Flask web variant.
 
 Usage:
 	pyqmh_project_init [--help]
@@ -11,6 +12,8 @@ What it does:
 	- Creates src/modules/__init__.py when missing.
 	- Creates .gitignore from template when missing.
 	- Creates src/app.py from template when missing.
+	- Supports creating app.py from ``new-app.py`` or ``new-app-flask.py``.
+	- Copies ``www-app`` web assets when the Flask variant is selected.
 """
 
 from __future__ import annotations
