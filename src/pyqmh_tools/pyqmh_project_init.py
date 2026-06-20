@@ -59,17 +59,28 @@ def create_app_file_with_options(src_dir: Path, description: str, use_flask_gui:
 
 	destination = src_dir / "app.py"
 	shutil.copy2(template_path, destination)
-
-	content = destination.read_text(encoding="utf-8")
-	content = content.replace("{{DESCRIPTION}}", description.strip())
-	content = content.replace("{{AUTHOR}}", getpass.getuser())
-	content = content.replace("{{MODULE_NAME}}", "MyModule")
-	destination.write_text(content, encoding="utf-8")
+	_apply_template_values(destination, description)
 
 	if use_flask_gui:
+		www_py_template = assets_dir / "new-app-www.py"
+		if not www_py_template.exists():
+			raise FileNotFoundError(f"Template not found: {www_py_template}")
+
+		www_py_destination = src_dir / "www.py"
+		shutil.copy2(www_py_template, www_py_destination)
+		_apply_template_values(www_py_destination, description)
 		copy_web_assets(assets_dir / "www-app", src_dir / "www")
 
 	return destination
+
+
+def _apply_template_values(file_path: Path, description: str) -> None:
+	"""Replace common placeholders for generated app files."""
+	content = file_path.read_text(encoding="utf-8")
+	content = content.replace("{{DESCRIPTION}}", description.strip())
+	content = content.replace("{{AUTHOR}}", getpass.getuser())
+	content = content.replace("{{MODULE_NAME}}", "MyModule")
+	file_path.write_text(content, encoding="utf-8")
 
 
 def copy_web_assets(source_dir: Path, destination_dir: Path) -> None:

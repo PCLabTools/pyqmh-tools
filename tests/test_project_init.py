@@ -48,7 +48,11 @@ def test_create_app_file_with_options_flask_copies_www_assets(tmp_path):
 
     assert created == src_dir / "app.py"
     app_text = created.read_text(encoding="utf-8")
-    assert "from flask import Flask" in app_text
+    assert "from www import WebGui" in app_text
+    assert "from flask import Flask" not in app_text
+    assert (src_dir / "www.py").exists()
+    www_py_text = (src_dir / "www.py").read_text(encoding="utf-8")
+    assert "from flask import Flask" in www_py_text
     assert (src_dir / "www" / "templates" / "index.html").exists()
     assert (src_dir / "www" / "static" / "css" / "main.css").exists()
 
@@ -62,7 +66,8 @@ def test_main_prompts_flask_before_description_and_creates_flask_assets(tmp_path
     project_init.main([])
 
     app_text = (tmp_path / "src" / "app.py").read_text(encoding="utf-8")
-    assert "from flask import Flask" in app_text
+    assert "from www import WebGui" in app_text
+    assert (tmp_path / "src" / "www.py").exists()
     assert (tmp_path / "src" / "www" / "templates" / "index.html").exists()
 
 

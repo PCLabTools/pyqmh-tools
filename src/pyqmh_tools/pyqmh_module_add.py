@@ -284,7 +284,7 @@ def create_module_app_file(
 	use_flask_gui: bool,
 	module_source: str,
 ) -> Path:
-	"""Create module-level app.py and optional www assets from templates."""
+	"""Create module-level app.py, optional www.py, and optional web assets from templates."""
 	assets_dir = Path(__file__).resolve().parent / "assets"
 	template_name = "new-module-app-flask.py" if use_flask_gui else "new-module-app.py"
 	template_path = assets_dir / template_name
@@ -309,6 +309,18 @@ def create_module_app_file(
 		destination.write_text(content, encoding="utf-8")
 
 	if use_flask_gui:
+		www_template_path = assets_dir / "new-module-app-www.py"
+		if not www_template_path.exists():
+			raise FileNotFoundError(f"Template not found: {www_template_path}")
+
+		www_destination = module_dir / "www.py"
+		shutil.copy2(www_template_path, www_destination)
+		apply_template_values(
+			www_destination,
+			module_class_name,
+			module_description,
+			extra_replacements={"{{MODULE_FOLDER_NAME}}": module_dir.name},
+		)
 		copy_web_assets(assets_dir / "www-module", module_dir / "www")
 
 	return destination
